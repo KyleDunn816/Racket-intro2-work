@@ -264,7 +264,7 @@
 
 
 
-;check-expects for radix-sort;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ADD MORE CHECK_EXPECTS
+;check-expects for radix-sort
 (define shovel (vector 989 87 69 58 111 9))
 (check-expect (begin (radix-sort shovel) shovel) (vector 9 58 69 87 111 989))
 (define shovel2 (vector 0))
