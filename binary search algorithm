@@ -9,7 +9,7 @@ See comments in your code.
 |#
 
 ;QUIZ Exercise 14
-;Members: Kyle Dunn, Dimitri Short, Derek Diskant
+
 (require while)
 ;give a number and list of numbers list of numbers are sorted in non decreasing order then if input is in list of numbers then say so if not return -1
 ;VECNUM: number + vectorof(num) -> number
