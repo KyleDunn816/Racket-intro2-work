@@ -1,0 +1,413 @@
+#|
+Grade: B
+
+See comments in your code.
+
+|#
+
+
+(define N 9) ; size of the board--must be a square
+
+(define SQLEN 100) ; the length of the side of a square in N-puzzle
+
+(define WIDTH (* (sqrt N) SQLEN))
+
+(define HEIGHT (* (sqrt N) SQLEN))
+
+(define e-scene (empty-scene WIDTH (+ HEIGHT SQLEN)))
+
+(define INITMOVES 100) ; number of moves to create an initial board
+
+
+; DATA DEFINITION FOR A BOARD
+; A board is a (listof natnum)
+
+; A world is a board
+(define WIN (build-list N (lambda (n) 
+                            (cond [(< n (- N 1)) (+ n 1)]
+                                  [else 0]))))
+
+(define (top-l-corner? p) (= p 0))
+
+(define (top-r-corner? p) (= p (- (sqrt N) 1)))
+
+(define (bottom-l-corner? p) (= p (- N (sqrt N))))
+
+(define (bottom-r-corner? p) (= p (- N 1)))
+
+(define (in-top-row? p) (< p (sqrt N)))
+
+(define (in-bottom-row? p) (>= p (- N (sqrt N))))
+
+(define (in-left-col? p) (= (remainder p (sqrt N)) 0))
+
+(define (in-right-col? p) (= (remainder p (sqrt N)) (- (sqrt N) 1)))
+
+(define (get-blank-sq-num l)
+  (cond [(empty? l) (error 'get-blank-sq-num "Blank not found")]
+        [(= (car l) 0) 0]
+        [else (add1 (get-blank-sq-num (cdr l)))]))
+
+
+; make-init-world: natnum world --> world
+; Purpose: To create the initial world by making the given number of moves in the given world
+(define (make-init-world nummoves w)
+  (cond [(= nummoves 0) w]
+        [else (make-init-world (sub1 nummoves) (make-move w))]))
+
+; make-move: world --> world
+; Purpose: To make a random move in the given world
+(define (make-move w)
+  (local [(define blank-index (get-blank-sq-num w))
+          (define bneighs (blank-neighs blank-index))
+          (define move-index (list-ref bneighs (random (length bneighs))))
+          ]
+    (swap-tiles w move-index blank-index)))
+
+; swap-tiles: world natnum natnum --> world
+; Purpose: To swap the given tiles in the given world
+(define (swap-tiles w i j)
+  (build-list N (lambda (n)
+                  (cond [(= n i) (list-ref w j)]
+                        [(= n j) (list-ref w i)]
+                        [else (list-ref w n)]))))
+
+; blank-neighs: number --> (listof number)
+; Purpose: To return a list of the tile numbers that neigbor the given blank tile number
+(define (blank-neighs p)
+  (cond [(top-l-corner? p)
+         (list (+ p 1) (+ p (sqrt N)))]
+        [(top-r-corner? p)
+         (list (- p 1) (+ p (sqrt N)))]
+        [(bottom-l-corner? p)
+         (list (- p (sqrt N)) (+ p 1))]
+        [(bottom-r-corner? p)
+         (list (- p (sqrt N)) (- p 1))]
+        [(in-top-row? p)
+         (list (- p 1) (+ p 1) (+ p (sqrt N)))]
+        [(in-bottom-row? p) 
+         (list (- p (sqrt N)) (- p 1) (+ p 1))]
+        [(in-left-col? p) 
+         (list (- p (sqrt N)) (+ p 1) (+ p (sqrt N)))]
+        [(in-right-col? p) 
+         (list (- p (sqrt N)) (- p 1) (+ p (sqrt N)))]
+        [else 
+         (list (- p (sqrt N)) (- p 1) (+ p 1) (+ p (sqrt N)))]))
+
+(define INIT-WORLD (make-init-world INITMOVES WIN))
+
+
+;; centers of the squares in the N-puzzle
+
+(define (compute-centers i)
+  (cond [(= i 0) '()]
+        [else (cons (make-posn (+ (* (remainder (- i 1) (sqrt N)) SQLEN) 50)
+                               (+ (* (quotient (- i 1) (sqrt N)) SQLEN) 50))
+                    (compute-centers (- i 1)))]))
+
+(define CENTERS (reverse (compute-centers N))) ; the centers of the squares
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; make-square: number --> image
+; Purpose: To create a square with the given number in it
+(define (make-square n)
+  (cond [(= n 0) (square SQLEN "solid" "green")]
+        [else (overlay/align "middle" 
+                             "middle" 
+                             (text (number->string n) 32 "black") 
+                             (rectangle SQLEN SQLEN "solid" "green"))]))
+
+(define (add-help-button scn)
+  (local [(define help-button (overlay/align "middle"
+                                             "middle"
+                                             (text "HELP ME!" 20 "black")
+                                             (overlay/align "middle"
+                                                            "middle"
+                                                            (rectangle (- (* SQLEN (sqrt N)) (/ SQLEN 2))
+                                                                       (/ SQLEN 1.5)
+                                                                       "solid" 
+                                                                       "yellow")
+                                                            (rectangle (* SQLEN (sqrt N)) SQLEN "solid" "red"))))]
+    (place-image help-button
+                 (/ WIDTH 2)
+                 (+ HEIGHT (/ SQLEN 2))
+                 scn)))
+
+
+; draw-world: world --> scene
+; Purpose: To draw the given world in the empty-scene
+(define (draw-world a-world)
+  (local ((define (helper i w ctrs) 
+            (cond [(empty? w) e-scene]
+                  [else (place-image (make-square (car w))
+                                     (posn-x (car ctrs))
+                                     (posn-y (car ctrs))
+                                     (helper (+ i 1) (rest w) (rest ctrs)))]))
+          (define (add-h-lines scn i)
+            (cond [(= i (sqrt N)) scn]
+                  [else (add-h-lines (add-line scn 0 (* i SQLEN) (* (sqrt N) SQLEN) (* i SQLEN) "red") (+ i 1))]))
+          (define (add-v-lines scn i)
+            (cond [(= i (sqrt N)) scn]
+                  [else (add-v-lines (add-line scn (* i SQLEN) 0 (* i SQLEN) (* (sqrt N) SQLEN) "red") (+ i 1))])))
+    (add-help-button (add-v-lines (add-h-lines (helper 0 a-world CENTERS) 1) 1))))
+
+;;; mouse clicking processing
+
+; differences: board board --> (listof number)
+; Purpose: To list the positions that have different tiles in two given boards
+(define (differences b1 b2)
+  (local [(define (helper i)
+            (cond [(= i 0) empty]
+                  [(= (list-ref b1 (sub1 i)) (list-ref b2 (sub1 i))) (helper (sub1 i))]
+                  [else (cons (sub1 i) (helper (sub1 i)))]))]
+    (helper N)))
+
+; mouse-over-help?: number number --> boolean
+; Purpose: To determine if the given coordinates are over the help button
+(define (mouse-over-help? x y) (> y HEIGHT))
+
+; process-mouse-event: world integer integer string --> world
+(define (process-mouse-event w x y me)
+  (cond [(string=? me "button-down") 
+         (cond [(mouse-over-help? x y) 
+                (local [(define solution (find-solution w))
+                        (define diffs (cond [(empty? solution) empty]
+                                            [else (differences w (first (rest solution)))]))]
+                  (cond [(empty? diffs) w]
+                        [else (swap-tiles w (first diffs) (first (rest diffs)))]))]
+               [else (move-blank w (make-posn x y))])]
+        [else w]))
+
+; move-blank: world posn --> world
+(define (move-blank w mpos)
+  (local [(define blnk-index (get-blank-sq-num w))
+          (define mouse-index (get-mouse-sq-num CENTERS mpos))]
+    (cond [(not (neighs? blnk-index mouse-index)) w]
+          [else (swap-blank-and-mouse w mouse-index)])))
+
+; swap-blank-and-mouse: world number number --> world
+; Purpose: To swap the mouse and blank squares in the world
+(define (swap-blank-and-mouse w mouse-index)
+  (local [(define mouse-val (list-ref w mouse-index))]
+    (map (lambda (n)
+           (cond [(= n 0) mouse-val]
+                 [(= n mouse-val) 0]
+                 [else n]))
+         w)))
+
+; mouse-in-square?: posn posn --> boolean
+; Purpose: To determine if the first posn is in the square that has the 2nd posn as its center
+(define (mouse-in-square? mposn scenter)
+  (and (< (abs (- (posn-x mposn) (posn-x scenter))) (/ SQLEN 2))
+       (< (abs (- (posn-y mposn) (posn-y scenter))) (/ SQLEN 2))))
+
+; get-mouse-sq-num: world posn --> number
+; Purpose: Return the position in the given world of the square the mouse is over or
+;          -1 if the mouse is not over a square
+(define (get-mouse-sq-num centers mposn)
+  (local [(define (helper centers i)
+            (cond [(empty? centers) -1]
+                  [(mouse-in-square? mposn (first centers)) i]
+                  [else (helper (rest centers) (add1 i))]))]
+    (helper centers 0)))
+
+; neighs?: number number --> boolean
+; Purpose: To determine if the given mouse index and blank indes are neighbors
+(define (neighs? bindex mindex)
+  (cond [(= mindex -1) false]
+        [(top-l-corner? bindex)
+         (or (= mindex (+ bindex 1))
+             (= mindex (+ bindex (sqrt N))))]
+        [(top-r-corner? bindex)
+         (or (= mindex (- bindex 1))
+             (= mindex (+ bindex (sqrt N))))]
+        [(bottom-l-corner? bindex)
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (+ bindex 1)))]
+        [(bottom-r-corner? bindex)
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (- bindex 1)))]
+        [(in-top-row? bindex)
+         (or (= mindex (- bindex 1))
+             (= mindex (+ bindex 1))
+             (= mindex (+ bindex (sqrt N))))]
+        [(in-bottom-row? bindex) 
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (- bindex 1))
+             (= mindex (+ bindex 1)))]
+        [(in-left-col? bindex) 
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (+ bindex 1))
+             (= mindex (+ bindex (sqrt N))))]
+        [(in-right-col? bindex) 
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (- bindex 1))
+             (= mindex (+ bindex (sqrt N))))]
+        [else 
+         (or (= mindex (- bindex (sqrt N)))
+             (= mindex (- bindex 1))
+             (= mindex (+ bindex 1))
+             (= mindex (+ bindex (sqrt N))))]))
+
+; mouse-on-neigh-of-blank?: (listof posn) posn --> boolean
+(define (mouse-on-neigh-of-blank? bneighs-posns mposn)
+  (cond [(empty? bneighs-posns) false]
+        [(mouse-in-square? mposn (car bneighs-posns)) true]
+        [else (mouse-on-neigh-of-blank? (rest bneighs-posns) mposn)]))
+
+; win?: world --> boolean
+; Purpose: To determine if the given world is WIN
+(define (win? w) (equal? w WIN))
+
+(define (make-win-scene w)    
+  (place-image (text "You win!!!" 32 "Orangered")
+               (/ WIDTH 2)
+               (/ HEIGHT 2)
+               (draw-world w)))
+
+; DATA DEFINITION
+; 
+; A sequence is either
+;   1. (list world)
+;   2. (cons w s), where w is a world and s is a sequence.
+; 
+; A list of sequence (lseq) is either
+;   1. empty
+;   2. (cons s l), where s is a sequence and l is a lseq
+; 
+
+
+
+; generate-children: board → non-empty-list-of-boards
+; Purpose: To generate a list of the children of the given board
+(define (generate-children b)
+  (local [(define blank-pos (get-blank-sq-num b))]
+    (map (lambda (p) (swap-tiles b blank-pos p))
+         (blank-neighs blank-pos))))
+
+
+; manhattan-distance: board → number
+; Purpose: To compute the Manhattan distance of the given board
+; manhattan-distance: board → number
+; Purpose: To compute the Manhattan distance of the given board
+(define (manhattan-distance b)
+  (local [
+          ; correct-pos: number --> number
+          ; Purpose: To determine the correct position of the given tile 
+          (define (correct-pos n)
+            (cond [(= n 0) (sub1 N)]
+                  [else (sub1 n)]))
+ 
+          ; distance: number number --> number 
+          ; Purpose: To compute the distance between the two tile positions 
+          (define (distance curr corr)
+            (+ (abs (- (quotient curr (sqrt N)) (quotient corr (sqrt N))))
+               (abs (- (remainder curr (sqrt N)) (remainder corr (sqrt N))))))
+ 
+          ; adder: number --> number 
+          ; Purpose: To add all the distances of each tile
+          (define (adder pos)
+            (cond [(= pos 0) 0]
+                  [else (+ (distance (sub1 pos) (correct-pos (list-ref b (sub1 pos))))
+                           (adder (sub1 pos)))]))] 
+    (adder N))) 
+ 
+
+
+; find-solution: board --> lseq
+; Purpose: To use the A* algorithm to fix the previous two issues that caused an infinite loop and expanding the children when not needed
+; An accumulator is used to accumulate the visited boards so they wont happen again and best-child uses the path with the shortest manhattan distance
+; Termination:
+; The program always terminates because search-paths will eventually generate a
+; child that will be the winning board
+  #|
+     How do you know this true?
+  |#
+
+(define (find-solution b)
+  (local [
+          ; search-paths: lseq --> seq 
+          ; Purpose: To find a solution to b by searching all possible paths
+          ; ACCUMULATOR INVARIANT:
+          #|
+             What paths are these? Are they random paths?
+          |#
+          ; paths holds list of paths that has not been visted yet to see if they are the correct paths
+          ; Accumulator invariant:
+          #|
+             Your code violates this invariant.
+          |#
+          ; visited - is a list of the lists of paths already check so they are not rechecked 
+          (define (search-paths paths visited)
+            (local [
+                    ; best-child: non-empty-list-of-paths → paths
+                    ; Purpose: To find the path with the board with the smallest 
+                    ; Manhattan distance in the given non-empty list of paths
+                    ; Accumulator invertiant: Path - Holds the best current path thus far
+                    (define (best-child path lop)
+                      (cond [(empty?  lop) path]
+                            [else
+                             (cond [(< (manhattan-distance (first (first lop))) 
+                                       (manhattan-distance (first path)))
+                                    (best-child (first lop)(rest lop))] 
+                                   [else (best-child path (rest lop))])]))
+                    
+                    ; Purpose: To find and store the best path based on the generated board
+                    (define best-path (best-child (first paths)(rest paths)))
+
+                    ; Purpose: To determine which paths have been visited and which havent to find the best solution
+                    (define children (filter (lambda (X)
+                                               (not (member X visited)))
+                                             (generate-children (first best-path))))
+                    
+                    ; Purpose: To generate the new possible paths based on the previous move 
+                    (define new-paths (map (lambda (c) (cons c best-path))
+                                           children))]
+              
+              ; Purpose: To determine when the winning board has been solved 
+              (cond [(equal?  (first best-path) WIN) best-path]
+                    [else (search-paths
+                           (append (filter
+                                    #| I do not understand what you are trying
+                                       to filter.
+                                         (remove best-move paths) = list of paths
+                                         visited = list of boards
+                                       Clearly, nothing in (remove best-move paths)
+                                       is in visited.
+                                    |#
+                                    (lambda (X)
+                                      (not (member (first X) visited)))
+
+                                    (remove best-path paths))
+                                   new-paths)
+                           (cons (first best-path)
+                                 #| This violates your signature. (first best-path)
+                                    is not a path. This means that the list constructed
+                                    is not a list of paths.
+                                 |#
+                                 visited))])))]
+    (reverse (search-paths (list (list b)) '()))))  
+     
+
+ 
+(big-bang (make-init-world INITMOVES WIN)
+  (on-draw draw-world)
+  (on-mouse process-mouse-event)
+  (stop-when win? make-win-scene))
+
+; Check-expects for find-solution
+(check-expect (find-solution (list 1 2 3 0 7 6 5 4 8)) (list
+                                                        (list 1 2 3 0 7 6 5 4 8)
+                                                        (list 1 2 3 7 0 6 5 4 8)
+                                                        (list 1 2 3 7 4 6 5 0 8)
+                                                        (list 1 2 3 7 4 6 0 5 8)
+                                                        (list 1 2 3 0 4 6 7 5 8)
+                                                        (list 1 2 3 4 0 6 7 5 8)
+                                                        (list 1 2 3 4 5 6 7 0 8)
+                                                        (list 1 2 3 4 5 6 7 8 0))) 
+
+
+(check-expect (find-solution (list 1 2 3 4 5 6 7 8 0)) (list WIN))
+ 
+
