@@ -10,7 +10,6 @@ See comments in your code.
 |#
 
 ;Refactor Quiz 
-;Group Members: Dimitri Short, Kyle Dunn, Derek Diskant, Gregori Presinal, Maryam Attalla
 
 ;;Refactor the following function to be imperative:
 ;;lon → number Purpose: Find the max of the given list
