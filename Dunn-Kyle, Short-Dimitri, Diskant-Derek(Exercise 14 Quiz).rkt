@@ -1,0 +1,102 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-advanced-reader.ss" "lang")((modname |Dunn-Kyle, Short-Dimitri, Diskant-Derek(Exercise 14 Quiz)|) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp") (lib "abstraction.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #t #t none #f ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp") (lib "abstraction.rkt" "teachpack" "2htdp")) #f)))
+#|
+Grade: C+
+
+See comments in your code.
+
+|#
+
+;QUIZ Exercise 14
+;Members: Kyle Dunn, Dimitri Short, Derek Diskant
+(require while)
+;give a number and list of numbers list of numbers are sorted in non decreasing order then if input is in list of numbers then say so if not return -1
+;VECNUM: number + vectorof(num) -> number
+;Purpose: does a binary search on the input vector for number. If number is not in vector, returns -1.
+;REQUIREMENT: vector is sorted in nondecreasing order.
+(define (VECNUM a-num a-vec)
+  (local[
+         #|
+            Signature?
+            Purpose?
+         |#
+         (define (VECSEARCH low high)
+           ;Does low plus high then divide the answer by to is what a-num is
+           (local [(define check-index 0)
+                   (define lo low)
+                   (define hi high)]
+             #|
+                 check-index = 0 = low plus high then divide the answer by two?
+             |#
+             ;INVARIANT: check-index is low plus high then divide the answer by to is what a-num is
+
+             #|
+                Use vector interval notation:
+                  vec[0->low] (exclusive) = [0..low-1]
+                  vec[high->vec-length] = [high..(sub1 (vector-length a-vec))]
+             |#
+             ;INVARIANT: lo is some index such that vec[0->low] (exclusive) does not contain a-num
+             ;INVARIANT: hi is some index such that vec[high->vec-length] (exclusive) does not contain a-num
+             (begin
+               (while (<= lo hi)
+                      #|
+                         Where is the logic? Your comments are not assertions. They are explanations
+                         of what the code does.
+
+                         How does your invariant prove the postcondition?
+                         How does you invariant help prove that indexing errors are impossible?
+                      |#
+                      (begin
+                        ;set! check-index Is the prime mutator counts the midpoint of the vector and searches for the inputted number if it is there 
+                        (set! check-index (quotient (+ lo hi) 2))
+                        ;INVARIANT: updates check-index to the current values of lo and hi such that check-index = current midpoint of our interval: (low+high)/2
+                        (cond
+                          [(= (vector-ref a-vec check-index) a-num)                     
+                           ;set!: if check-index has the value we are looking for, we remove our interval so we can return the index of a-num.
+                           (set! lo (add1 high))]
+                          ;INVARIANT: The midpoint of our interval is the value we are searching for.
+                          [(< (vector-ref a-vec check-index) a-num)
+                           ; ;set! lo is the lowest index of the lowest number left of the middle of the vector it changes to whichever number is the lowest.
+                           ;set! lo is the lowest number in the vector it adds 1 to check past the mid point of the inputted vector to find the lowest number  
+                           (set! lo (add1 check-index))]
+                          ;INVARIANT: Since our midpoint # > a-num, our interval must now reflect all values greater than the midpoint such that:
+                          ;INVARIANT: [lo=(midpoint+1),hi]
+                          ;INVARIANT: This means we need to update our midpoint and get a new midpoint in our next iteration.
+                          ; ;set! Searches the vector from left to right from the midpoint to find the inputted number if it is not there then returns -1 
+                          [else (set! hi (sub1 check-index))]
+                          ;INVARIANT: Since our midpoint # < a-num, our interval must now reflect all values less than the midpoint such that:
+                          ;INVARIANT: [lo,hi=(midpoint-1)]
+                          ;INVARIANT: This means we need to update our midpoint and get a new midpoint in our next iteration.
+                          )))
+               (cond [(= (vector-ref a-vec check-index) a-num)
+                      check-index]
+                     [else -1]))))]
+    (VECSEARCH 0 (sub1 (vector-length a-vec)))))
+  
+
+;TERMINATION CLAUSE
+;The program uses a while loop to search the inputted vector from left to right using binary search
+#|
+   But, binary search does not search from left to right.
+|#
+;and binary searches the whole vector from low the high and find the Inputted number if it is there if not returns -1
+;The while loop will stop eventually because:
+;low starts at 0 and increases if the midpoint between [low,high] is less than our desired number during an iteration.
+;high starts at (vector-length - 1) and decreases if the midpoint between [low,high] is greater than our desired number during an iteration.
+;Thus the size of our interval will decrease every iteration such that eventually low>high, satisfying the termination clause (<= lo hi)
+
+
+
+;check-expect number is in the vector
+(check-expect (VECNUM 50 (vector 10 20 30 40 50 60 70 80 90)) 4)
+(check-expect (VECNUM 80 (vector 10 20 30 40 50 60 70 80 90 100))7)
+(check-expect (VECNUM 30 (vector 21 22 23 24 25 26 27 28 29 30))9)
+(check-expect (VECNUM 0 (vector 0 1 2 3 4 5 6 7 8 9)) 0)
+(check-expect (VECNUM 21 (vector 9 10 21))2)
+;check-expect number is not in the vector
+(check-expect (VECNUM 100 (vector 10 20 30 40 50 60 70 80 90 00))-1)
+(check-expect (VECNUM 1 (vector 2 3 4 5 6 7 8 9 )) -1)
+(check-expect (VECNUM 2 (vector 258)) -1)
+(check-expect (VECNUM 6 (vector 205 403 404 405))-1)
+(check-expect (VECNUM 3 (vector  1984 1985 1986 1987))-1)
